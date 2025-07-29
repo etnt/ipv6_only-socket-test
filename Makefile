@@ -4,7 +4,7 @@
 ERL = erlc
 
 # Erlang source files
-SOURCES = socket_test.erl socket_test2.erl
+SOURCES = socket_test.erl socket_test2.erl socket_test3.erl
 
 # Compiled beam files (derived from sources)
 BEAMS = $(SOURCES:.erl=.beam)
@@ -21,6 +21,8 @@ clean:
 	rm -f *.beam
 	rm -f erl_crash.dump
 
+test: all run-test1 run-test2 run-test3
+
 # Run socket_test with port 9876
 run-test1:
 	erl -noshell -s socket_test main 9876
@@ -29,8 +31,12 @@ run-test1:
 run-test2:
 	erl -noshell -s socket_test2 main 9876
 
+# Run socket_test3 with port 9876
+run-test3:
+	erl -noshell -s socket_test3 main 9876
+
 # Phony targets
-.PHONY: all clean run-test1 run-test2
+.PHONY: all clean run-test1 run-test2 run-test3 test
 
 # Help target
 help:
