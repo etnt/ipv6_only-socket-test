@@ -1,6 +1,9 @@
 # IPv4/IPv6 Dual Socket Binding Test
 
-This repository contains Erlang programs to test IPv4 and IPv6 socket binding behavior on different operating systems, specifically examining how the `IPV6_V6ONLY` socket option affects the ability to bind separate sockets to the same port.
+This repository contains both Erlang and C programs to test IPv4 and IPv6 socket binding behavior on different operating systems, specifically examining how the `IPV6_V6ONLY` socket option affects the ability to bind separate sockets to the same port.
+
+**THERE SEEM TO BE SOMETHING WRONG WITH THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
+(see the example outputs below)
 
 ## Background
 
@@ -42,21 +45,36 @@ By following this procedure, you can successfully listen for both IPv4 and IPv6 
 
 ## Test Programs
 
-This repository includes Erlang test programs that demonstrate this behavior:
+This repository includes both Erlang and C test programs that demonstrate this behavior:
 
-### socket_test.erl
+### Erlang Implementation
+
+#### socket_test.erl
 
 Tests binding to IPv6 `[::]` and IPv4 `127.0.0.1` on the same port, which is a common scenario where you want a service available locally over IPv4 while being accessible from anywhere over IPv6.
 
-### socket_test2.erl
+#### socket_test2.erl
 
-Similar test with potentially different binding addresses or test scenarios.
+Tests binding to IPv6 `[::]` and IPv4 `0.0.0.0` on the same port, examining system default behavior and the effect of the `ipv6_v6only` option.
+
+### C Implementation
+
+#### socket_test2.c
+
+A C implementation that mirrors the behavior of `socket_test2.erl`, performing the same two tests:
+
+1. **System Default Test**: Creates an IPv6 socket bound to `[::]` and then attempts to create an IPv4 socket bound to `0.0.0.0` using system defaults.
+
+2. **IPV6_V6ONLY Test**: Explicitly sets the `IPV6_V6ONLY` socket option to 1 on the IPv6 socket before binding, then attempts to bind the IPv4 socket.
+
+The C version provides identical functionality to the Erlang version but demonstrates the lower-level socket API calls directly.
 
 ## How to Build and Run
 
 ### Prerequisites
 
 - Erlang/OTP installed on your system
+- C compiler (gcc or clang)
 - Make (optional, for using the Makefile)
 
 ### Compilation
@@ -67,9 +85,16 @@ make all
 ```
 
 #### Manual compilation:
+
+**Erlang:**
 ```bash
 erlc socket_test.erl
 erlc socket_test2.erl
+```
+
+**C:**
+```bash
+gcc -Wall -Wextra -std=c99 -o socket_test2 socket_test2.c
 ```
 
 ### Running the Tests
@@ -81,9 +106,17 @@ make run-test1
 
 # Run socket_test2 with port 9876
 make run-test2
+
+# Run C socket_test2 with port 9876
+make run-test-c
+
+# Run all tests
+make test
 ```
 
 #### Manual execution:
+
+**Erlang:**
 ```bash
 # Run socket_test
 erl -noshell -s socket_test main 9876
@@ -92,50 +125,89 @@ erl -noshell -s socket_test main 9876
 erl -noshell -s socket_test2 main 9876
 ```
 
+**C:**
+```bash
+# Run C socket_test2
+./socket_test2 9876
+```
+
 Replace `9876` with any high-numbered port you have permission to use.
 
 ## Expected Output
 
 You will see one of two outcomes for the first test, depending on your OS configuration:
 
-### Outcome A: Conflict (Common on Linux)
+### Outcome: Conflict
 
 If your system uses dual-stack sockets by default, the first socket will claim the port for both IPv4 and IPv6, causing the second bind to fail.
 
+**Erlang/OTP 27 [erts-15.1.2] Output on Mac (make run-test2):**
 ```
---- Test: System Default (Listen on [::] and 127.0.0.1) ---
+--- Test: System Default Socket Behavior , Port: 9876 ---
 OK: IPv6 socket opened on [::]:9876.
-Error: Could not open IPv4 socket on 127.0.0.1, Reason: eaddrinuse
+Error: Could not open IPv4 socket, address is already in use.
 Result: Conflict! Your system's default is likely a dual-stack socket (ipv6_v6only = false).
+--- RESULT: dual_stack_conflict
 
 --- Test: Forcing Sockets with ipv6_v6only ---
 OK: IPv6 socket with 'ipv6_v6only' opened on [::]:9876.
-OK: IPv4 socket also opened on 127.0.0.1:9876.
-Result: Success! Sockets coexist when 'ipv6_v6only' is set explicitly.
+OK: IPv4 socket also opened on 0.0.0.0:9876.
+Result: Success! ipv6_v6only=true allows separate IPv4 and IPv6 sockets.
+--- RESULT: separate_sockets
 ```
 
-### Outcome B: Success (Common on Windows)
-
-If your system requires separate binds for IPv4 and IPv6 by default, both sockets in the first test will open successfully.
-
+**C Output on Mac (make run-test-c):**
 ```
---- Test: System Default (Listen on [::] and 127.0.0.1) ---
+=== Test 1: System Default Socket Behavior ===
+OK: IPv6 socket opened on [::]:9876
+Error: Could not open IPv4 socket, address is already in use.
+Result: Conflict! Your system's default is likely a dual-stack socket (IPV6_V6ONLY = 0).
+
+=== Test 2: Forcing Sockets with IPV6_V6ONLY ===
+OK: IPv6 socket with 'IPV6_V6ONLY' opened on [::]:9876
+OK: IPv4 socket also opened on 0.0.0.0:9876
+Result: Success! IPV6_V6ONLY=1 allows separate IPv4 and IPv6 sockets.
+```
+
+**Erlang/OTP 28 [erts-16.0.1] Output on Linux (make run-test2):**
+```
+--- Test: System Default Socket Behavior , Port: 9876 ---
 OK: IPv6 socket opened on [::]:9876.
-OK: IPv4 socket also opened on 127.0.0.1:9876.
+OK: IPv4 socket also opened on 0.0.0.0:9876.
 Result: Success! Your system allows separate IPv4 and IPv6 binds by default.
+--- RESULT: separate_sockets
 
 --- Test: Forcing Sockets with ipv6_v6only ---
 OK: IPv6 socket with 'ipv6_v6only' opened on [::]:9876.
-OK: IPv4 socket also opened on 127.0.0.1:9876.
-Result: Success! Sockets coexist when 'ipv6_v6only' is set explicitly.
+OK: IPv4 socket also opened on 0.0.0.0:9876.
+Result: Success! ipv6_v6only=true allows separate IPv4 and IPv6 sockets.
+--- RESULT: separate_sockets
 ```
+
+**C Output on Linux (make run-test-c):**
+```
+=== Test 1: System Default Socket Behavior ===
+OK: IPv6 socket opened on [::]:9876
+Error: Could not open IPv4 socket, address is already in use.
+Result: Conflict! Your system's default is likely a dual-stack socket (IPV6_V6ONLY = 0).
+
+=== Test 2: Forcing Sockets with IPV6_V6ONLY ===
+OK: IPv6 socket with 'IPV6_V6ONLY' opened on [::]:9876
+OK: IPv4 socket also opened on 0.0.0.0:9876
+Result: Success! IPV6_V6ONLY=1 allows separate IPv4 and IPv6 sockets.
+```
+
+**THERE SEEM TO BE SOMETHING WRONG WITH THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
+
 
 ## Makefile Targets
 
-- `make all` or `make` - Compile all Erlang files
+- `make all` or `make` - Compile all Erlang files and C executable
 - `make clean` - Remove compiled files and crash dumps
-- `make run-test1` - Compile and run socket_test with port 9876
-- `make run-test2` - Compile and run socket_test2 with port 9876
+- `make run-test1` - Compile and run socket_test (Erlang) with port 9876
+- `make run-test2` - Compile and run socket_test2 (Erlang) with port 9876
+- `make run-test-c` - Compile and run socket_test2 (C) with port 9876
+- `make test` - Run all tests (Erlang and C)
 - `make help` - Show available targets
 
 ## Understanding the Results
