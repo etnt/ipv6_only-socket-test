@@ -2,9 +2,6 @@
 
 This repository contains both Erlang and C programs to test IPv4 and IPv6 socket binding behavior on different operating systems, specifically examining how the `IPV6_V6ONLY` socket option affects the ability to bind separate sockets to the same port.
 
-**THERE SEEM TO BE SOMETHING WRONG WITH (our, patched!) THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
-(see the example outputs below)
-
 ## Background
 
 It is possible to set up listening sockets on both `0.0.0.0:8080` (for IPv4) and `[::]:8080` (for IPv6) without them conflicting, but the method and necessity depend on the operating system's default behavior.
@@ -169,7 +166,7 @@ OK: IPv4 socket also opened on 0.0.0.0:9876
 Result: Success! IPV6_V6ONLY=1 allows separate IPv4 and IPv6 sockets.
 ```
 
-**Erlang/OTP 28 [erts-16.0.1] Output on Linux (make run-test2):**
+**Our, patched, Erlang/OTP 28 [erts-16.0.1] Output on Linux (make run-test2):**
 ```
 --- Test: System Default Socket Behavior , Port: 9876 ---
 OK: IPv6 socket opened on [::]:9876.
@@ -184,6 +181,8 @@ Result: Success! ipv6_v6only=true allows separate IPv4 and IPv6 sockets.
 --- RESULT: separate_sockets
 ```
 
+**NOTE: our patched Erlang will allow using the same port since it always set `ipv6_v6only` to `true`**
+
 **C Output on Linux (make run-test-c):**
 ```
 === Test 1: System Default Socket Behavior ===
@@ -196,8 +195,6 @@ OK: IPv6 socket with 'IPV6_V6ONLY' opened on [::]:9876
 OK: IPv4 socket also opened on 0.0.0.0:9876
 Result: Success! IPV6_V6ONLY=1 allows separate IPv4 and IPv6 sockets.
 ```
-
-**THERE SEEM TO BE SOMETHING WRONG WITH (our, patched!) THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
 
 
 ## Makefile Targets
