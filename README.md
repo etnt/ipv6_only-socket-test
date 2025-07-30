@@ -2,7 +2,7 @@
 
 This repository contains both Erlang and C programs to test IPv4 and IPv6 socket binding behavior on different operating systems, specifically examining how the `IPV6_V6ONLY` socket option affects the ability to bind separate sockets to the same port.
 
-**THERE SEEM TO BE SOMETHING WRONG WITH THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
+**THERE SEEM TO BE SOMETHING WRONG WITH (our, patched!) THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
 (see the example outputs below)
 
 ## Background
@@ -197,7 +197,7 @@ OK: IPv4 socket also opened on 0.0.0.0:9876
 Result: Success! IPV6_V6ONLY=1 allows separate IPv4 and IPv6 sockets.
 ```
 
-**THERE SEEM TO BE SOMETHING WRONG WITH THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
+**THERE SEEM TO BE SOMETHING WRONG WITH (our, patched!) THE ERLANG BEHAVIOUR ON LINUX, or... ???** 
 
 
 ## Makefile Targets
